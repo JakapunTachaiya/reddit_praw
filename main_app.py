@@ -62,7 +62,7 @@ def getDataBydate(start_date,end_date,subreddit):
                                               before=end_epoch,
                                     subreddit=subreddit,
                                     filter=['id', 'subreddit'],
-                                    limit=10
+                                    # limit=10
                                     ))
         # print(resultList)
         for idx in range(0,len(resultList)):
