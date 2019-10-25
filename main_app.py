@@ -138,6 +138,10 @@ def getPrawbyID(id):
         author_id = '[deleted]'
         author_name = '[deleted]'
         threadAuthor =None
+    elif not hasattr(submission.author, 'id') or not hasattr(submission.author, 'name'):
+        author_id = '[deleted]'
+        author_name = '[deleted]'
+        threadAuthor = None
     else:
         try:
             author_id = submission.author.id
@@ -183,7 +187,7 @@ def getCommentById(id):
         if not comment.author:
             author_id = '[deleted]'
             author_name = '[deleted]'
-        elif not hasattr(comment.author,'id') or not hasattr(comment.author,'name') :
+        elif not hasattr(comment.author,'id') or not hasattr(comment.author,'name'):
             author_id = '[deleted]'
             author_name = '[deleted]'
         else:
