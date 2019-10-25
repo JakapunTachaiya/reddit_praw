@@ -29,6 +29,11 @@ def readFile(filename):
     return filePD
 
 def get_date_string(created):
+    # print(created,type(created))
+    if created is None:
+        return None
+    elif not isinstance(created, float):
+        return None
     return dt.datetime.fromtimestamp(created).strftime("%Y/%m/%d-%H:%M:%S")
 
 def stringToDateTime(dateTxt):
@@ -69,8 +74,9 @@ def getDataBydate(start_date,end_date,subreddit):
             id = resultList[idx].id
             threadContent,threadAuthor = getPrawbyID(id)
             print("{},({}/{}) getting tid: {}, #comemnts: {}".format( current_datetime.date(),idx+1,len(resultList),id,threadContent['commsNum']))
+            # print("start getcommentID")
             posts, authors = getCommentById(id)
-
+            # print("end getcommentID")
             JSON_output ={}
             JSON_output['op'] = threadContent
             JSON_output['posts'] = posts
@@ -83,9 +89,21 @@ def getDataBydate(start_date,end_date,subreddit):
             if threadAuthor is not None:
                 authors.append(threadAuthor)
             authors = list(set(authors))
+            # print("start saveUser")
             saveUser(authors)
+            # print("end saveUser")
 
     return
+
+def checkhasattri(obj,name):
+    try:
+        if hasattr(obj, name):
+            return getattr(obj, name)
+        else:
+            return None
+    except prawcore.exceptions.NotFound:
+        return None
+
 
 def saveUser(authors):
 
@@ -94,16 +112,20 @@ def saveUser(authors):
 
     for each in authors:
         outDict = {}
-        outDict['author_id'] = each.id
-        outDict['author_name'] = each.name
-        outDict['comment_karma'] = each.comment_karma
-        outDict['create_date'] = get_date_string(each.created_utc)
-        outDict['has_verified_email'] = each.has_verified_email
-        outDict['is_employee'] = each.is_employee
-        outDict['is_mod'] = each.is_mod
-        outDict['is_gold'] = each.is_gold
 
-        outPath = os.path.join("redditors", each.id)
+        # redditorObj = reddit.redditor(each.name)
+        redditorObj = each
+
+        # outDict['author_id'] = checkhasattri(redditorObj,"id")
+        outDict['author_name'] = redditorObj.name
+        outDict['comment_karma'] = checkhasattri(redditorObj,"comment_karma")
+        outDict['create_date'] = get_date_string(checkhasattri(redditorObj,"created_utc"))
+        outDict['has_verified_email'] = checkhasattri(redditorObj,"has_verified_email")
+        outDict['is_employee'] = checkhasattri(redditorObj,"is_employee")
+        outDict['is_mod'] = checkhasattri(redditorObj,"is_mod")
+        outDict['is_gold'] = checkhasattri(redditorObj,"is_gold")
+
+        outPath = os.path.join("redditors", redditorObj.name)
         dumptext = json.dumps(outDict, indent=4)
 
         with open(outPath, 'w') as f:
@@ -138,15 +160,12 @@ def getPrawbyID(id):
         author_id = '[deleted]'
         author_name = '[deleted]'
         threadAuthor =None
-    elif not hasattr(submission.author, 'id') or not hasattr(submission.author, 'name'):
-        author_id = '[deleted]'
-        author_name = '[deleted]'
-        threadAuthor = None
     else:
         try:
-            author_id = submission.author.id
-            author_name = submission.author.name
-            threadAuthor = submission.author
+            redditor = reddit.redditor(submission.author.name)
+            # author_id = redditor.id
+            author_name = redditor.name
+            threadAuthor = redditor
         except prawcore.exceptions.NotFound:
             author_id = '[deleted]'
             author_name = '[deleted]'
@@ -158,7 +177,7 @@ def getPrawbyID(id):
     outDict['id'] = submission.id
     outDict['commsNum'] = submission.num_comments
     outDict['timeStamp'] = get_date_string(submission.created_utc)
-    outDict['author_id'] = author_id
+    # outDict['author_id'] = author_id
     outDict['author_name'] = author_name
     outDict['distinguished'] = submission.distinguished
     outDict['edited'] = submission.edited
@@ -187,13 +206,15 @@ def getCommentById(id):
         if not comment.author:
             author_id = '[deleted]'
             author_name = '[deleted]'
-        elif not hasattr(comment.author,'id') or not hasattr(comment.author,'name'):
-            author_id = '[deleted]'
-            author_name = '[deleted]'
         else:
-            author_id = comment.author.id
-            author_name = comment.author.name
-            authors.append(comment.author)
+            try:
+                redditor = reddit.redditor(name=comment.author.name)
+                # author_id = redditor.id
+                author_name = redditor.name
+                authors.append(redditor)
+            except prawcore.exceptions.NotFound:
+                author_id = '[deleted]'
+                author_name = '[deleted]'
 
         eachPost = {}
         eachPost['comment'] = comment.body
@@ -206,7 +227,7 @@ def getCommentById(id):
         eachPost['parent_id'] = comment.parent_id
         eachPost['score'] = comment.score
         eachPost['stickied'] = comment.stickied
-        eachPost['author_id'] = author_id
+        # eachPost['author_id'] = author_id
         eachPost['author_name'] = author_name
         posts[comment.id] = eachPost
 
