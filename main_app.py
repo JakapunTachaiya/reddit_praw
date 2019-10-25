@@ -213,8 +213,8 @@ def getCommentById(id):
     return posts,authors
 
 def main(argv):
-    startdate = str(sys.argv[1]).split("-")
-    enddate = str(sys.argv[2]).split("-")
+    startdate =  [int(x) for x in str(sys.argv[1]).split("-")]
+    enddate = [int(x) for x in str(sys.argv[2]).split("-")]
 
 
     start_date = date(startdate[0], startdate[1], startdate[2])
