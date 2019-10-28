@@ -50,6 +50,19 @@ def createFolder(basePath,subboard,year,month):
     if not os.path.exists(os.path.join(basePath,subboard,year,month)):
         os.makedirs(os.path.join(basePath,subboard,year,month))
     return os.path.join(basePath, subboard, year, month)
+def checkFetchedFile(JSON_output,start_date,end_date,subreddit):
+
+    threadDateTime = stringToDateTime(JSON_output['timeStamp'])
+
+    basePath = start_date.strftime("%Y-%m-%d") + '_' + end_date.strftime("%Y-%m-%d")
+    folPath = createFolder(basePath, subreddit, threadDateTime.year, threadDateTime.month)
+    threadId = JSON_output['id']
+    outPath = os.path.join(folPath, threadId)
+    resultBoolean = os.path.isfile(outPath)
+    if resultBoolean:
+        print("skip id : {}".format(threadId))
+
+    return resultBoolean
 
 def getDataBydate(start_date,end_date,subreddit):
 
@@ -72,7 +85,12 @@ def getDataBydate(start_date,end_date,subreddit):
         # print(resultList)
         for idx in range(0,len(resultList)):
             id = resultList[idx].id
+
             threadContent,threadAuthor = getPrawbyID(id)
+            if checkFetchedFile(threadContent,start_date,end_date,subreddit):
+
+                continue
+
             print("{},({}/{}) getting tid: {}, #comemnts: {}".format( current_datetime.date(),idx+1,len(resultList),id,threadContent['commsNum']))
             # print("start getcommentID")
             posts, authors = getCommentById(id)
@@ -80,8 +98,6 @@ def getDataBydate(start_date,end_date,subreddit):
             JSON_output ={}
             JSON_output['op'] = threadContent
             JSON_output['posts'] = posts
-
-
 
             saveThread(JSON_output,start_date,end_date,subreddit)
             # jprint(posts)
