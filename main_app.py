@@ -50,6 +50,8 @@ def createFolder(basePath,subboard,year,month):
     if not os.path.exists(os.path.join(basePath,subboard,year,month)):
         os.makedirs(os.path.join(basePath,subboard,year,month))
     return os.path.join(basePath, subboard, year, month)
+
+
 def checkFetchedFile(JSON_output,start_date,end_date,subreddit):
 
     threadDateTime = stringToDateTime(JSON_output['timeStamp'])
@@ -63,6 +65,103 @@ def checkFetchedFile(JSON_output,start_date,end_date,subreddit):
         print("skip id : {}".format(threadId))
 
     return resultBoolean
+
+
+def checkFetchedFile2(JSON_output,working_date,subreddit):
+
+    threadDateTime = stringToDateTime(JSON_output['timeStamp'])
+
+    basePath = "reddit"
+    folPath = createFolder(basePath, subreddit, threadDateTime.year, threadDateTime.month)
+    threadId = JSON_output['id']
+    outPath = os.path.join(folPath, threadId)
+    resultBoolean = os.path.isfile(outPath)
+    if resultBoolean:
+        print("skip id : {}".format(threadId))
+
+    return resultBoolean
+
+def checkCurrentIdx(working_date,idx,end_idx):
+    working_date = str(working_date)
+    if not os.path.exists(working_date):
+        with open(working_date, 'w') as f:
+            f.write("{}_{}".format(idx,end_idx))
+            f.close()
+            currentIdx = 0
+
+    if os.path.exists(working_date):
+        with open(working_date, 'r') as f:
+            currentIdx = int(f.readline().split("_")[0])
+
+    return currentIdx
+
+
+def addCurrentIdx(working_date,idx,end_idx):
+    working_date = str(working_date)
+    if not os.path.exists(working_date):
+        with open(working_date, 'w') as f:
+            f.write("{}_{}".format(idx,end_idx))
+            f.close()
+            currentIdx = 0
+
+    if os.path.exists(working_date):
+        with open(working_date, 'w') as f:
+            f.write("{}_{}".format(idx+1, end_idx))
+            f.close()
+            currentIdx = 0
+
+    return currentIdx
+
+
+def getDataBydate2(working_date,subreddit):
+
+
+    current_datetime = dt.datetime.combine(working_date, dt.time(0, 0))
+    next_datetime = dt.datetime.combine(working_date + timedelta(days=1), dt.time(0, 0))
+
+    start_epoch = int(current_datetime.timestamp())
+    end_epoch = int(next_datetime.timestamp())
+
+    resultList = list(api.search_submissions(after=start_epoch,
+                                             before=end_epoch,
+                                             subreddit=subreddit,
+                                             filter=['id', 'subreddit'],
+                                             # limit=10
+                                             ))
+
+    for idx in range(0, len(resultList)):
+
+        idx = checkCurrentIdx(working_date,idx,len(resultList))
+
+        id = resultList[idx].id
+
+        threadContent, threadAuthor = getPrawbyID(id)
+        # if checkFetchedFile2(threadContent, working_date, subreddit):
+        #     continue
+
+        print("{},({}/{}) getting tid: {}, #comemnts: {}".format(current_datetime.date(), idx + 1, len(resultList), id,
+                                                                 threadContent['commsNum']))
+        # print("start getcommentID")
+        posts, authors = getCommentById(id)
+        # print("end getcommentID")
+        JSON_output = {}
+        JSON_output['op'] = threadContent
+        JSON_output['posts'] = posts
+
+        saveThread2(JSON_output, subreddit)
+        # jprint(posts)
+        # jprint(JSON_output)
+        if threadAuthor is not None:
+            authors.append(threadAuthor)
+        authors = list(set(authors))
+        # print("start saveUser")
+        saveUser(authors)
+        # print("end saveUser")
+
+
+        addCurrentIdx(working_date, idx, len(resultList))
+
+    return
 
 def getDataBydate(start_date,end_date,subreddit):
 
@@ -147,6 +246,22 @@ def saveUser(authors):
         with open(outPath, 'w') as f:
             f.write(dumptext)
 
+
+    return
+
+def saveThread2(JSON_output,subreddit):
+    threadDateTime = stringToDateTime(JSON_output['op']['timeStamp'])
+    threadId = JSON_output['op']['id']
+    # print(threadId)
+    subboard = subreddit
+
+    basePath = "reddit"
+
+    dumptext = json.dumps(JSON_output, indent=4)
+    folPath = createFolder(basePath, subboard, threadDateTime.year, threadDateTime.month)
+    outPath = os.path.join(folPath, threadId)
+    with open(outPath, 'w') as f:
+        f.write(dumptext)
 
     return
 
@@ -254,18 +369,24 @@ def getCommentById(id):
     return posts,authors
 
 def main(argv):
-    startdate =  [int(x) for x in str(sys.argv[1]).split("-")]
-    enddate = [int(x) for x in str(sys.argv[2]).split("-")]
-
-
-    start_date = date(startdate[0], startdate[1], startdate[2])
-    end_date = date(enddate[0], enddate[1], enddate[2])
-
-    getDataBydate(start_date,end_date,'politics')
-
-    # posts,authors = getCommentById('dmi3qx')
+    # startdate =  [int(x) for x in str(sys.argv[1]).split("-")]
+    # enddate = [int(x) for x in str(sys.argv[2]).split("-")]
     #
-    # jprint(posts)
+    #
+    # start_date = date(startdate[0], startdate[1], startdate[2])
+    # end_date = date(enddate[0], enddate[1], enddate[2])
+    #
+    # getDataBydate(start_date,end_date,'politics')
+
+
+    startdate =  [int(x) for x in str(sys.argv[1]).split("-")]
+    working_date = date(startdate[0], startdate[1], startdate[2])
+
+    subreddit = "politics"
+    getDataBydate2(working_date,subreddit)
+
+
+
 
 
 
