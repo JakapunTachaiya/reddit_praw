@@ -10,10 +10,15 @@ import prawcore
 from psaw import PushshiftAPI
 from datetime import timedelta, date
 
-reddit = praw.Reddit(client_id='I1tNw_qvW9yMLw', \
-                     client_secret='thSepgJ0Y-TRDd-Z3yyF7GA8Awk', \
-                     user_agent='politics_crawler', \
-                     username='jakapun', \
+# reddit = praw.Reddit(client_id='I1tNw_qvW9yMLw', \
+#                      client_secret='thSepgJ0Y-TRDd-Z3yyF7GA8Awk', \
+#                      user_agent='politics_crawler', \
+#                      username='jakapun', \
+#                      password='redditucr123')
+reddit = praw.Reddit(client_id='kFP64ure1v6C1Q', \
+                     client_secret='VTLLxJXF5zTRYpagm5pPEyHz1Js', \
+                     user_agent='politics', \
+                     username='boong555', \
                      password='redditucr123')
 
 
@@ -384,10 +389,6 @@ def main(argv):
 
     subreddit = "politics"
     getDataBydate2(working_date,subreddit)
-
-
-
-
 
 
 if __name__ == "__main__":
