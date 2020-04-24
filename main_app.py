@@ -9,6 +9,7 @@ import praw
 import prawcore
 from psaw import PushshiftAPI
 from datetime import timedelta, date
+import time
 
 # reddit = praw.Reddit(client_id='I1tNw_qvW9yMLw', \
 #                      client_secret='thSepgJ0Y-TRDd-Z3yyF7GA8Awk', \
@@ -36,8 +37,6 @@ def readFile(filename):
 def get_date_string(created):
     # print(created,type(created))
     if created is None:
-        return None
-    elif not isinstance(created, float):
         return None
     return dt.datetime.fromtimestamp(created).strftime("%Y/%m/%d-%H:%M:%S")
 
@@ -117,6 +116,58 @@ def addCurrentIdx(working_date,idx,end_idx):
 
     return currentIdx
 
+def getDataBydate3(working_date,subreddit):
+
+
+    current_datetime = dt.datetime.combine(working_date, dt.time(0, 0))
+    next_datetime = dt.datetime.combine(working_date + timedelta(days=1), dt.time(0, 0))
+
+    start_epoch = int(current_datetime.timestamp())
+    end_epoch = int(next_datetime.timestamp())
+
+    resultList = list(api.search_submissions(after=start_epoch,
+                                             before=end_epoch,
+                                             subreddit=subreddit,
+                                             # filter=['id', 'subreddit'],
+                                             # limit=10
+                                             ))
+
+    for idx in range(0, len(resultList)):
+
+        idx = checkCurrentIdx(working_date,idx,len(resultList))
+
+        id = resultList[idx].id
+        # t = time.process_time()
+        # print("start getThread")
+
+        threadContent, threadAuthor = getThreadDictFromList(resultList[idx])
+        # print("end getcommentID",time.process_time() - t)
+
+        print("{},({}/{}) getting tid: {}, #comemnts: {}".format(current_datetime.date(), idx + 1, len(resultList), id,
+                                                                 threadContent['commsNum']))
+        # t = time.process_time()
+        # print("start getcommentID")
+        posts, authors = getCommentByIdPushshift(id,subreddit)
+        # print("end getcommentID",time.process_time() - t)
+
+        # t = time.process_time()
+        # print("start saveUser")
+        JSON_output = {}
+        JSON_output['op'] = threadContent
+        JSON_output['posts'] = posts
+        saveThread2(JSON_output, subreddit)
+        if threadAuthor is not None:
+            authors.append(threadAuthor)
+        authors = list(set(authors))
+
+        saveUser(authors)
+
+
+        addCurrentIdx(working_date, idx, len(resultList))
+        # print("end saveUser",time.process_time() - t)
+
+    return
+
 
 def getDataBydate2(working_date,subreddit):
 
@@ -141,6 +192,8 @@ def getDataBydate2(working_date,subreddit):
         id = resultList[idx].id
 
         threadContent, threadAuthor = getPrawbyID(id)
+
+
         # if checkFetchedFile2(threadContent, working_date, subreddit):
         #     continue
 
@@ -287,6 +340,46 @@ def saveThread(JSON_output,start_date,end_date,subreddit):
     return
 
 
+def getThreadDictFromList(submission):
+    outDict = {}
+
+    if not submission.author:
+        author_id = '[deleted]'
+        author_name = '[deleted]'
+        threadAuthor = None
+    else:
+        try:
+            redditor = reddit.redditor(submission.author)
+            # author_id = redditor.id
+            author_name = redditor.name
+            threadAuthor = redditor
+        except prawcore.exceptions.NotFound:
+            author_id = '[deleted]'
+            author_name = '[deleted]'
+            threadAuthor = None
+
+    outDict['title'] = submission.title
+    outDict['score'] = submission.score
+    outDict['id'] = submission.id
+    outDict['commsNum'] = submission.num_comments
+    outDict['timeStamp'] = get_date_string(submission.created_utc)
+    # outDict['author_id'] = author_id
+    outDict['author_name'] = author_name
+    # outDict['distinguished'] = submission.distinguished
+    # outDict['edited'] = submission.edited
+    outDict['is_self'] = submission.is_self
+    outDict['locked'] = submission.locked
+    outDict['selftext'] = submission.selftext
+    outDict['num_comments'] = submission.num_comments
+    outDict['over_18'] = submission.over_18
+    outDict['spoiler'] = submission.spoiler
+    outDict['subreddit'] = submission.subreddit
+    outDict['stickied'] = submission.stickied
+    # outDict['upvote_ratio'] = submission.upvote_ratio
+    outDict['url'] = submission.url
+
+    return outDict, threadAuthor
+
 def getPrawbyID(id):
 
     outDict = {}
@@ -367,9 +460,46 @@ def getCommentById(id):
         eachPost['author_name'] = author_name
         posts[comment.id] = eachPost
 
-    # print(len(posts))
-    # print(posts)
-    # jprint(posts)
+
+    return posts,authors
+
+def getCommentByIdPushshift(id,subreddit):
+
+    submission =  list(api.search_comments(
+                                    subreddit=subreddit,link_id= id
+                                    ))
+    posts = {}
+    authors = []
+
+    for comment in submission:
+        if not comment.author:
+            author_id = '[deleted]'
+            author_name = '[deleted]'
+        else:
+            try:
+                redditor = reddit.redditor(name=comment.author)
+                # author_id = redditor.id
+                author_name = redditor.name
+                authors.append(redditor)
+            except prawcore.exceptions.NotFound:
+                author_id = '[deleted]'
+                author_name = '[deleted]'
+
+        eachPost = {}
+        eachPost['comment'] = comment.body
+        eachPost['timeStamp'] = get_date_string(comment.created_utc)
+        # eachPost['distinguished'] = comment.distinguished
+        # eachPost['edited'] = comment.edited
+        eachPost['id'] = comment.id
+        eachPost['is_submitter'] = comment.is_submitter
+        eachPost['link_id'] = comment.link_id
+        eachPost['parent_id'] = comment.parent_id
+        eachPost['score'] = comment.score
+        eachPost['stickied'] = comment.stickied
+        # eachPost['author_id'] = author_id
+        eachPost['author_name'] = author_name
+        posts[comment.id] = eachPost
+
 
     return posts,authors
 
@@ -388,7 +518,9 @@ def main(argv):
     working_date = date(startdate[0], startdate[1], startdate[2])
 
     subreddit = "politics"
-    getDataBydate2(working_date,subreddit)
+    # getDataBydate2(working_date,subreddit)
+
+    getDataBydate3(working_date, subreddit)
 
 
 if __name__ == "__main__":
