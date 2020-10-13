@@ -11,16 +11,12 @@ from psaw import PushshiftAPI
 from datetime import timedelta, date
 import time
 
-# reddit = praw.Reddit(client_id='I1tNw_qvW9yMLw', \
-#                      client_secret='thSepgJ0Y-TRDd-Z3yyF7GA8Awk', \
-#                      user_agent='politics_crawler', \
-#                      username='jakapun', \
-#                      password='redditucr123')
-reddit = praw.Reddit(client_id='kFP64ure1v6C1Q', \
-                     client_secret='VTLLxJXF5zTRYpagm5pPEyHz1Js', \
-                     user_agent='politics', \
-                     username='boong555', \
-                     password='redditucr123')
+#add your own Reddit Rest Tokens
+reddit = praw.Reddit(client_id='', \
+                     client_secret='', \
+                     user_agent='', \
+                     username='', \
+                     password='')
 
 
 api = PushshiftAPI()
@@ -56,34 +52,34 @@ def createFolder(basePath,subboard,year,month):
     return os.path.join(basePath, subboard, year, month)
 
 
-def checkFetchedFile(JSON_output,start_date,end_date,subreddit):
-
-    threadDateTime = stringToDateTime(JSON_output['timeStamp'])
-
-    basePath = start_date.strftime("%Y-%m-%d") + '_' + end_date.strftime("%Y-%m-%d")
-    folPath = createFolder(basePath, subreddit, threadDateTime.year, threadDateTime.month)
-    threadId = JSON_output['id']
-    outPath = os.path.join(folPath, threadId)
-    resultBoolean = os.path.isfile(outPath)
-    if resultBoolean:
-        print("skip id : {}".format(threadId))
-
-    return resultBoolean
-
-
-def checkFetchedFile2(JSON_output,working_date,subreddit):
-
-    threadDateTime = stringToDateTime(JSON_output['timeStamp'])
-
-    basePath = "reddit"
-    folPath = createFolder(basePath, subreddit, threadDateTime.year, threadDateTime.month)
-    threadId = JSON_output['id']
-    outPath = os.path.join(folPath, threadId)
-    resultBoolean = os.path.isfile(outPath)
-    if resultBoolean:
-        print("skip id : {}".format(threadId))
-
-    return resultBoolean
+# def checkFetchedFile(JSON_output,start_date,end_date,subreddit):
+#
+#     threadDateTime = stringToDateTime(JSON_output['timeStamp'])
+#
+#     basePath = start_date.strftime("%Y-%m-%d") + '_' + end_date.strftime("%Y-%m-%d")
+#     folPath = createFolder(basePath, subreddit, threadDateTime.year, threadDateTime.month)
+#     threadId = JSON_output['id']
+#     outPath = os.path.join(folPath, threadId)
+#     resultBoolean = os.path.isfile(outPath)
+#     if resultBoolean:
+#         print("skip id : {}".format(threadId))
+#
+#     return resultBoolean
+#
+#
+# def checkFetchedFile2(JSON_output,working_date,subreddit):
+#
+#     threadDateTime = stringToDateTime(JSON_output['timeStamp'])
+#
+#     basePath = "reddit"
+#     folPath = createFolder(basePath, subreddit, threadDateTime.year, threadDateTime.month)
+#     threadId = JSON_output['id']
+#     outPath = os.path.join(folPath, threadId)
+#     resultBoolean = os.path.isfile(outPath)
+#     if resultBoolean:
+#         print("skip id : {}".format(threadId))
+#
+#     return resultBoolean
 
 def checkCurrentIdx(working_date,idx,end_idx):
     working_date = str(working_date)
@@ -116,7 +112,7 @@ def addCurrentIdx(working_date,idx,end_idx):
 
     return currentIdx
 
-def getDataBydate3(working_date,subreddit):
+def getDataBydate(working_date,subreddit):
 
 
     current_datetime = dt.datetime.combine(working_date, dt.time(0, 0))
@@ -135,7 +131,6 @@ def getDataBydate3(working_date,subreddit):
     for idx in range(0, len(resultList)):
 
         idx = checkCurrentIdx(working_date,idx,len(resultList))
-
         id = resultList[idx].id
         # t = time.process_time()
         # print("start getThread")
@@ -155,118 +150,18 @@ def getDataBydate3(working_date,subreddit):
         JSON_output = {}
         JSON_output['op'] = threadContent
         JSON_output['posts'] = posts
-        saveThread2(JSON_output, subreddit)
+        saveThread(JSON_output, subreddit)
         if threadAuthor is not None:
             authors.append(threadAuthor)
         authors = list(set(authors))
 
         saveUser(authors)
-
 
         addCurrentIdx(working_date, idx, len(resultList))
         # print("end saveUser",time.process_time() - t)
 
     return
 
-
-def getDataBydate2(working_date,subreddit):
-
-
-    current_datetime = dt.datetime.combine(working_date, dt.time(0, 0))
-    next_datetime = dt.datetime.combine(working_date + timedelta(days=1), dt.time(0, 0))
-
-    start_epoch = int(current_datetime.timestamp())
-    end_epoch = int(next_datetime.timestamp())
-
-    resultList = list(api.search_submissions(after=start_epoch,
-                                             before=end_epoch,
-                                             subreddit=subreddit,
-                                             filter=['id', 'subreddit'],
-                                             # limit=10
-                                             ))
-
-    for idx in range(0, len(resultList)):
-
-        idx = checkCurrentIdx(working_date,idx,len(resultList))
-
-        id = resultList[idx].id
-
-        threadContent, threadAuthor = getPrawbyID(id)
-
-
-        # if checkFetchedFile2(threadContent, working_date, subreddit):
-        #     continue
-
-        print("{},({}/{}) getting tid: {}, #comemnts: {}".format(current_datetime.date(), idx + 1, len(resultList), id,
-                                                                 threadContent['commsNum']))
-        # print("start getcommentID")
-        posts, authors = getCommentById(id)
-        # print("end getcommentID")
-        JSON_output = {}
-        JSON_output['op'] = threadContent
-        JSON_output['posts'] = posts
-
-        saveThread2(JSON_output, subreddit)
-        # jprint(posts)
-        # jprint(JSON_output)
-        if threadAuthor is not None:
-            authors.append(threadAuthor)
-        authors = list(set(authors))
-        # print("start saveUser")
-        saveUser(authors)
-        # print("end saveUser")
-
-
-        addCurrentIdx(working_date, idx, len(resultList))
-
-    return
-
-def getDataBydate(start_date,end_date,subreddit):
-
-
-    for current_date in daterange(start_date, end_date):
-
-
-        current_datetime = dt.datetime.combine(current_date, dt.time(0, 0))
-        next_datetime = dt.datetime.combine(current_date + timedelta(days=1), dt.time(0, 0))
-
-        start_epoch = int(current_datetime.timestamp())
-        end_epoch = int(next_datetime.timestamp())
-
-        resultList = list(api.search_submissions(after=start_epoch,
-                                              before=end_epoch,
-                                    subreddit=subreddit,
-                                    filter=['id', 'subreddit'],
-                                    # limit=10
-                                    ))
-        # print(resultList)
-        for idx in range(0,len(resultList)):
-            id = resultList[idx].id
-
-            threadContent,threadAuthor = getPrawbyID(id)
-            if checkFetchedFile(threadContent,start_date,end_date,subreddit):
-
-                continue
-
-            print("{},({}/{}) getting tid: {}, #comemnts: {}".format( current_datetime.date(),idx+1,len(resultList),id,threadContent['commsNum']))
-            # print("start getcommentID")
-            posts, authors = getCommentById(id)
-            # print("end getcommentID")
-            JSON_output ={}
-            JSON_output['op'] = threadContent
-            JSON_output['posts'] = posts
-
-            saveThread(JSON_output,start_date,end_date,subreddit)
-            # jprint(posts)
-            # jprint(JSON_output)
-            if threadAuthor is not None:
-                authors.append(threadAuthor)
-            authors = list(set(authors))
-            # print("start saveUser")
-            saveUser(authors)
-            # print("end saveUser")
-
-    return
 
 def checkhasattri(obj,name):
     try:
@@ -304,10 +199,9 @@ def saveUser(authors):
         with open(outPath, 'w') as f:
             f.write(dumptext)
 
-
     return
 
-def saveThread2(JSON_output,subreddit):
+def saveThread(JSON_output,subreddit):
     threadDateTime = stringToDateTime(JSON_output['op']['timeStamp'])
     threadId = JSON_output['op']['id']
     # print(threadId)
@@ -323,21 +217,6 @@ def saveThread2(JSON_output,subreddit):
 
     return
 
-def saveThread(JSON_output,start_date,end_date,subreddit):
-    threadDateTime = stringToDateTime(JSON_output['op']['timeStamp'])
-    threadId = JSON_output['op']['id']
-    # print(threadId)
-    subboard = subreddit
-
-    basePath = start_date.strftime("%Y-%m-%d")+'_'+end_date.strftime("%Y-%m-%d")
-
-    dumptext = json.dumps(JSON_output, indent=4)
-    folPath = createFolder(basePath, subboard, threadDateTime.year, threadDateTime.month)
-    outPath = os.path.join(folPath, threadId)
-    with open(outPath, 'w') as f:
-        f.write(dumptext)
-
-    return
 
 
 def getThreadDictFromList(submission):
@@ -380,48 +259,47 @@ def getThreadDictFromList(submission):
 
     return outDict, threadAuthor
 
-def getPrawbyID(id):
-
-    outDict = {}
-    submission = reddit.submission(id=id)
-
-    if not submission.author:
-        author_id = '[deleted]'
-        author_name = '[deleted]'
-        threadAuthor =None
-    else:
-        try:
-            redditor = reddit.redditor(submission.author.name)
-            # author_id = redditor.id
-            author_name = redditor.name
-            threadAuthor = redditor
-        except prawcore.exceptions.NotFound:
-            author_id = '[deleted]'
-            author_name = '[deleted]'
-            threadAuthor = None
-
-
-    outDict['title'] = submission.title
-    outDict['score'] = submission.score
-    outDict['id'] = submission.id
-    outDict['commsNum'] = submission.num_comments
-    outDict['timeStamp'] = get_date_string(submission.created_utc)
-    # outDict['author_id'] = author_id
-    outDict['author_name'] = author_name
-    outDict['distinguished'] = submission.distinguished
-    outDict['edited'] = submission.edited
-    outDict['is_self'] = submission.is_self
-    outDict['locked'] = submission.locked
-    outDict['selftext'] = submission.selftext
-    outDict['num_comments'] = submission.num_comments
-    outDict['over_18'] = submission.over_18
-    outDict['spoiler'] = submission.spoiler
-    outDict['subreddit'] = submission.subreddit.name
-    outDict['stickied'] = submission.stickied
-    outDict['upvote_ratio'] = submission.upvote_ratio
-    outDict['url'] = submission.url
-
-    return outDict, threadAuthor
+# def getPrawbyID(id):
+#
+#     outDict = {}
+#     submission = reddit.submission(id=id)
+#
+#     if not submission.author:
+#         author_id = '[deleted]'
+#         author_name = '[deleted]'
+#         threadAuthor =None
+#     else:
+#         try:
+#             redditor = reddit.redditor(submission.author.name)
+#             # author_id = redditor.id
+#             author_name = redditor.name
+#             threadAuthor = redditor
+#         except prawcore.exceptions.NotFound:
+#             author_id = '[deleted]'
+#             author_name = '[deleted]'
+#             threadAuthor = None
+#
+#     outDict['title'] = submission.title
+#     outDict['score'] = submission.score
+#     outDict['id'] = submission.id
+#     outDict['commsNum'] = submission.num_comments
+#     outDict['timeStamp'] = get_date_string(submission.created_utc)
+#     # outDict['author_id'] = author_id
+#     outDict['author_name'] = author_name
+#     outDict['distinguished'] = submission.distinguished
+#     outDict['edited'] = submission.edited
+#     outDict['is_self'] = submission.is_self
+#     outDict['locked'] = submission.locked
+#     outDict['selftext'] = submission.selftext
+#     outDict['num_comments'] = submission.num_comments
+#     outDict['over_18'] = submission.over_18
+#     outDict['spoiler'] = submission.spoiler
+#     outDict['subreddit'] = submission.subreddit.name
+#     outDict['stickied'] = submission.stickied
+#     outDict['upvote_ratio'] = submission.upvote_ratio
+#     outDict['url'] = submission.url
+#
+#     return outDict, threadAuthor
 
 def getCommentById(id):
     submission = reddit.submission(id=id)
@@ -465,6 +343,7 @@ def getCommentById(id):
 
 def getCommentByIdPushshift(id,subreddit):
 
+    # get all comments from pushshift
     submission =  list(api.search_comments(
                                     subreddit=subreddit,link_id= id
                                     ))
@@ -477,6 +356,7 @@ def getCommentByIdPushshift(id,subreddit):
             author_name = '[deleted]'
         else:
             try:
+                #get User info from reddit api
                 redditor = reddit.redditor(name=comment.author)
                 # author_id = redditor.id
                 author_name = redditor.name
@@ -504,23 +384,12 @@ def getCommentByIdPushshift(id,subreddit):
     return posts,authors
 
 def main(argv):
-    # startdate =  [int(x) for x in str(sys.argv[1]).split("-")]
-    # enddate = [int(x) for x in str(sys.argv[2]).split("-")]
-    #
-    #
-    # start_date = date(startdate[0], startdate[1], startdate[2])
-    # end_date = date(enddate[0], enddate[1], enddate[2])
-    #
-    # getDataBydate(start_date,end_date,'politics')
+    subreddit = sys.argv[1]
 
-
-    startdate =  [int(x) for x in str(sys.argv[1]).split("-")]
+    startdate =  [int(x) for x in str(sys.argv[2]).split("-")]
     working_date = date(startdate[0], startdate[1], startdate[2])
 
-    subreddit = "politics"
-    # getDataBydate2(working_date,subreddit)
-
-    getDataBydate3(working_date, subreddit)
+    getDataBydate(working_date, subreddit)
 
 
 if __name__ == "__main__":
