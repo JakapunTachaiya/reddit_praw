@@ -12,12 +12,11 @@ from datetime import timedelta, date
 import time
 
 #add your own Reddit Rest Tokens
-reddit = praw.Reddit(client_id='', \
+reddit = praw.Reddit(client_id="", \
                      client_secret='', \
                      user_agent='', \
                      username='', \
                      password='')
-
 
 api = PushshiftAPI()
 
@@ -81,31 +80,31 @@ def createFolder(basePath,subboard,year,month):
 #
 #     return resultBoolean
 
-def checkCurrentIdx(working_date,idx,end_idx):
-    working_date = str(working_date)
-    if not os.path.exists(working_date):
-        with open(working_date, 'w') as f:
+def checkCurrentIdx(subreddit,working_date,idx,end_idx):
+    outPath = "{} {}".format(subreddit,working_date)
+    if not os.path.exists(outPath):
+        with open(outPath, 'w') as f:
             f.write("{}_{}".format(idx,end_idx))
             f.close()
             currentIdx = 0
 
-    if os.path.exists(working_date):
-        with open(working_date, 'r') as f:
+    if os.path.exists(outPath):
+        with open(outPath, 'r') as f:
             currentIdx = int(f.readline().split("_")[0])
 
     return currentIdx
 
 
-def addCurrentIdx(working_date,idx,end_idx):
-    working_date = str(working_date)
-    if not os.path.exists(working_date):
-        with open(working_date, 'w') as f:
+def addCurrentIdx(subreddit,working_date,idx,end_idx):
+    outPath = "{} {}".format(subreddit,working_date)
+    if not os.path.exists(outPath):
+        with open(outPath, 'w') as f:
             f.write("{}_{}".format(idx,end_idx))
             f.close()
             currentIdx = 0
 
-    if os.path.exists(working_date):
-        with open(working_date, 'w') as f:
+    if os.path.exists(outPath):
+        with open(outPath, 'w') as f:
             f.write("{}_{}".format(idx+1, end_idx))
             f.close()
             currentIdx = 0
@@ -130,7 +129,7 @@ def getDataBydate(working_date,subreddit):
 
     for idx in range(0, len(resultList)):
 
-        idx = checkCurrentIdx(working_date,idx,len(resultList))
+        idx = checkCurrentIdx(subreddit,working_date,idx,len(resultList))
         id = resultList[idx].id
         # t = time.process_time()
         # print("start getThread")
@@ -148,6 +147,7 @@ def getDataBydate(working_date,subreddit):
         # t = time.process_time()
         # print("start saveUser")
         JSON_output = {}
+        threadContent['subreddit'] = subreddit
         JSON_output['op'] = threadContent
         JSON_output['posts'] = posts
         saveThread(JSON_output, subreddit)
@@ -157,7 +157,7 @@ def getDataBydate(working_date,subreddit):
 
         saveUser(authors)
 
-        addCurrentIdx(working_date, idx, len(resultList))
+        addCurrentIdx(subreddit,working_date, idx, len(resultList))
         # print("end saveUser",time.process_time() - t)
 
     return
@@ -237,6 +237,11 @@ def getThreadDictFromList(submission):
             author_name = '[deleted]'
             threadAuthor = None
 
+    if not submission.upvote_ratio:
+        outDict['upvote_ratio'] = None
+    else:
+        outDict['upvote_ratio'] = submission.upvote_ratio
+
     outDict['title'] = submission.title
     outDict['score'] = submission.score
     outDict['id'] = submission.id
@@ -254,7 +259,7 @@ def getThreadDictFromList(submission):
     outDict['spoiler'] = submission.spoiler
     outDict['subreddit'] = submission.subreddit
     outDict['stickied'] = submission.stickied
-    # outDict['upvote_ratio'] = submission.upvote_ratio
+
     outDict['url'] = submission.url
 
     return outDict, threadAuthor
