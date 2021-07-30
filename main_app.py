@@ -237,10 +237,14 @@ def getThreadDictFromList(submission):
             author_name = '[deleted]'
             threadAuthor = None
 
-    if not submission.upvote_ratio:
-        outDict['upvote_ratio'] = None
-    else:
+    try:
         outDict['upvote_ratio'] = submission.upvote_ratio
+    except AttributeError:
+        outDict['upvote_ratio'] = None
+    try:
+        outDict['selftext'] = submission.selftext
+    except AttributeError:
+        outDict['selftext'] = None
 
     outDict['title'] = submission.title
     outDict['score'] = submission.score
@@ -253,7 +257,7 @@ def getThreadDictFromList(submission):
     # outDict['edited'] = submission.edited
     outDict['is_self'] = submission.is_self
     outDict['locked'] = submission.locked
-    outDict['selftext'] = submission.selftext
+    # outDict['selftext'] = submission.selftext
     outDict['num_comments'] = submission.num_comments
     outDict['over_18'] = submission.over_18
     outDict['spoiler'] = submission.spoiler
